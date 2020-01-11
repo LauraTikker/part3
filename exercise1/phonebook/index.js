@@ -1,6 +1,16 @@
 const express = require('express')
-
 const app = express()
+const bodyParser = require('body-parser') 
+const morgan = require('morgan')
+
+const body = morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
+
+app.use(bodyParser.json())
+
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+
+
 
 let persons = [
      {
@@ -27,57 +37,65 @@ let persons = [
 
 app.get('/api/persons', (request, response) => {
     response.json(persons)
-  })
+})
 
 
 app.get('/api/info', (request, response) => {
   const date = new Date()
-  console.log(date.getDate())
-  response.send(`Phonebook has info for ${persons.length} people \n
-  ${Timestamp(date)}`)
+  response.send(`Phonebook has info for ${persons.length} people <br /> <br />  ${date.toString()}`)
 })
 
-const Timestamp = (date) => {
+app.get('/api/persons/:id', (request, response) => {
+  const id = Number(request.params.id)
+  const person = persons.find(person => person.id === id)
 
-  const weekday = () => {
-    switch(date.getDay()) {
-      case 1: return "Mon";
-      case 2: return "Tue";
-      case 3: return "Wed";
-      case 4: return "Thu";
-      case 5: return "Fri";
-      case 6: return "Sat";
-      case 7: return "Sun";
-    }}
-  const month = () => {
-    switch(date.getMonth()) {
-      case 0: return "Jan"
-      case 1: return "Feb"
-      case 2: return "Mar"
-      case 3: return "Apr"
-      case 4: return "May"
-      case 5: return "Jun"
-      case 6: return "Jul"
-      case 7: return "Aug"
-      case 8: return "Sept"
-      case 9: return "Oct"
-      case 10: return ""
-      case 11: return "September"
-      case 12: return "September"
+  if (person) {
+    response.json(person)
+  } else {
+    response.status(404).end()
+  }
+  
+})
 
+app.delete('/api/persons/:id', (request, response) => {
+  const id = Number(request.params.id)
+  
+  persons = persons.filter(person => person.id !== id)
+
+  response.status(204).end()
+
+})
+
+app.post('/api/persons', (request, response) => {
+
+  const personToBeAdded = request.body
+
+  if (personToBeAdded.name && personToBeAdded.number)  {
+
+    const personNameCheck = persons.find(person => person.name === personToBeAdded.name)
+
+    if (!personNameCheck)  {
+      const id = Math.random()*1000000
+
+      personToBeAdded.id = id.toFixed(0)
+      persons.concat(personToBeAdded)
+
+      response.status(201).json(personToBeAdded)
+    } else {
+      response.status(201).json({ error: 'name must be unique' })
     }
-  }  
+    
+  } else {
+    response.status(406).json({ error: 'name or number missing' })
+  }
+  
+})
 
-  return (
-    `
-    ${weekday()} 
-    ${date.getDate()}
-    ${date.getMonth()}
-    `
-
-  )
-
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
 }
+
+app.use(unknownEndpoint)
 
 const PORT = 3001
 
