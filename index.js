@@ -3,7 +3,18 @@ const app = express()
 const bodyParser = require('body-parser') 
 const morgan = require('morgan')
 const cors = require('cors')
+const mongoose = require('mongoose')
 
+const url = `mongodb+srv://fullstack:AlwaysWrite12@cluster0-2zo3s.mongodb.net/persons-app?retryWrites=true&w=majority`
+
+mongoose.connect(url, { useNewUrlParser: true })
+
+const personSchema = new mongoose.Schema({
+  name: String,
+  number: String
+})
+
+const Person = mongoose.model('Person', personSchema)
 
 const body = morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
 
@@ -11,30 +22,6 @@ app.use(bodyParser.json())
 app.use(express.static('build'))
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 app.use(cors())
-
-
-let persons = [
-     {
-        name: "Arto Hellas", 
-        number: "040-123456",
-        id: 1
-      },
-      { 
-        name: "Ada Lovelace", 
-        number: "39-44-5323523",
-        id: 2
-      },
-      { 
-        name: "Dan Abramov", 
-        number: "12-43-234345",
-        id: 3
-      },
-      { 
-        name: "Mary Poppendieck", 
-        number: "39-23-6423122",
-        id: 4
-      }
-]
 
 app.get('/api/persons', (request, response) => {
     response.json(persons)
