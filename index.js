@@ -21,12 +21,13 @@ app.get('/api/persons', (request, response) => {
 
 app.get('/api/info', (request, response) => {
   const date = new Date()
-  response.send(`Phonebook has info for ${persons.length} people <br /> <br />  ${date.toString()}`)
+  Person.find({}).then(persons => {
+    response.send(`Phonebook has info for ${persons.length} people <br /> <br />  ${date.toString()}`)
+  })
 })
 
 app.get('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id)
-  
+  const id = request.params.id
   Person.findById(id).then(person => {
     if (person) {
       response.json(person.toJSON())
@@ -34,29 +35,24 @@ app.get('/api/persons/:id', (request, response) => {
       response.status(404).end()
     }
   })
-  
 })
 
 app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id)
-  
-  persons = persons.filter(person => person.id !== id)
-
-  response.status(204).end()
-
+  const id = request.params.id
+  Person.findByIdAndDelete(id).then(person => {
+    if (person) {
+      response.json(person.toJSON())
+    } else {
+      response.status(404).end()
+    }
+  })
 })
 
 app.post('/api/persons', (request, response) => {
-
   const personToBeAdded = request.body
-
   if (personToBeAdded.name && personToBeAdded.number)  {
 
-    const personNameCheck = persons.find(person => person.name === personToBeAdded.name)
-
-    if (!personNameCheck)  {
-
-      const newPerson = new Person({
+     const newPerson = new Person({
         name: personToBeAdded.name,
         number: personToBeAdded.number
       })
@@ -64,11 +60,7 @@ app.post('/api/persons', (request, response) => {
       newPerson.save().then(savedPerson => {
         response.status(201).json(savedPerson.toJSON())
       })
-
-    } else {
-      response.status(201).json({ error: 'name must be unique' })
-    }
-    
+        
   } else {
     response.status(406).json({ error: 'name or number missing' })
   }
