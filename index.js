@@ -1,20 +1,10 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser') 
 const morgan = require('morgan')
 const cors = require('cors')
-const mongoose = require('mongoose')
-
-const url = `mongodb+srv://fullstack:AlwaysWrite12@cluster0-2zo3s.mongodb.net/persons-app?retryWrites=true&w=majority`
-
-mongoose.connect(url, { useNewUrlParser: true })
-
-const personSchema = new mongoose.Schema({
-  name: String,
-  number: String
-})
-
-const Person = mongoose.model('Person', personSchema)
+const Person = require('./models/person.js')
 
 const body = morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
 
@@ -24,9 +14,10 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 app.use(cors())
 
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Person.find({}).then(persons => {
+      response.json(persons.map(person => person.toJSON()))
+    })
 })
-
 
 app.get('/api/info', (request, response) => {
   const date = new Date()
@@ -35,13 +26,14 @@ app.get('/api/info', (request, response) => {
 
 app.get('/api/persons/:id', (request, response) => {
   const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
-
-  if (person) {
-    response.json(person)
-  } else {
-    response.status(404).end()
-  }
+  
+  Person.findById(id).then(person => {
+    if (person) {
+      response.json(person.toJSON())
+    } else {
+      response.status(404).end()
+    }
+  })
   
 })
 
@@ -63,12 +55,16 @@ app.post('/api/persons', (request, response) => {
     const personNameCheck = persons.find(person => person.name === personToBeAdded.name)
 
     if (!personNameCheck)  {
-      const id = Math.random()*1000000
 
-      personToBeAdded.id = id.toFixed(0)
-      persons.concat(personToBeAdded)
+      const newPerson = new Person({
+        name: personToBeAdded.name,
+        number: personToBeAdded.number
+      })
 
-      response.status(201).json(personToBeAdded)
+      newPerson.save().then(savedPerson => {
+        response.status(201).json(savedPerson.toJSON())
+      })
+
     } else {
       response.status(201).json({ error: 'name must be unique' })
     }
@@ -85,7 +81,7 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
